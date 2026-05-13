@@ -132,6 +132,7 @@ The application provides a command-line interface to manage the database.
 -   https://ip-ranges.amazonaws.com/ip-ranges.json
 -   https://www.manage-roadworks.service.gov.uk/open-data-onboarding
 -   JSON schema: https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/json/api-notification-event-notifier-message.json
+-   StreetManager JIRA: https://streetmanager.atlassian.net/
 
 ## Misc Notes
 
