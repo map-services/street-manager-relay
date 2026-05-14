@@ -111,7 +111,8 @@ jobs:
             type=sha
           labels: |
             maintainer=rm-hull
-            org.opencontainers.image.description=REST API for GPS routes
+            org.opencontainers.image.description=Geoloc relay for the GOV.UK Street Manager API
+            org.opencontainers.image.source="https://github.com/map-services/street-manager-relay"
             org.opencontainers.image.licenses=MIT
 
       - name: Build and push Docker image
