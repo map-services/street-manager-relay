@@ -13,9 +13,9 @@ import (
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"github.com/kofalt/go-memoize"
-	"github.com/rm-hull/street-manager-relay/internal"
-	"github.com/rm-hull/street-manager-relay/internal/promoter"
-	"github.com/rm-hull/street-manager-relay/internal/routes"
+	"github.com/map-services/street-manager-relay/internal"
+	"github.com/map-services/street-manager-relay/internal/promoter"
+	"github.com/map-services/street-manager-relay/internal/routes"
 	"github.com/tavsec/gin-healthcheck/checks"
 
 	"github.com/getsentry/sentry-go"

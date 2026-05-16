@@ -5,8 +5,8 @@ import (
 	"math"
 
 	"github.com/joho/godotenv"
+	"github.com/map-services/street-manager-relay/cmd"
 	"github.com/rm-hull/godx"
-	"github.com/rm-hull/street-manager-relay/cmd"
 	"github.com/spf13/cobra"
 )
 

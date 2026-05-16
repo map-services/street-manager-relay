@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/cockroachdb/errors"
-	"github.com/rm-hull/street-manager-relay/internal"
+	"github.com/map-services/street-manager-relay/internal"
 )
 
 func RegenerateIndex(dbPath string) error {

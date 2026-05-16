@@ -1,4 +1,4 @@
-module github.com/rm-hull/street-manager-relay
+module github.com/map-services/street-manager-relay
 
 go 1.26
 

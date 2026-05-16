@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kofalt/go-memoize"
-	"github.com/rm-hull/street-manager-relay/internal"
-	"github.com/rm-hull/street-manager-relay/models"
+	"github.com/map-services/street-manager-relay/internal"
+	"github.com/map-services/street-manager-relay/models"
 )
 
 func HandleRefData(repo *internal.DbRepository, cache *memoize.Memoizer) gin.HandlerFunc {

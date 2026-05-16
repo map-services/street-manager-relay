@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/cockroachdb/errors"
-	"github.com/rm-hull/street-manager-relay/generated"
-	"github.com/rm-hull/street-manager-relay/internal"
-	"github.com/rm-hull/street-manager-relay/models"
+	"github.com/map-services/street-manager-relay/generated"
+	"github.com/map-services/street-manager-relay/internal"
+	"github.com/map-services/street-manager-relay/models"
 	"github.com/schollz/progressbar/v3"
 )
 

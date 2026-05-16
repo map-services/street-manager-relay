@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
+	"github.com/map-services/street-manager-relay/models"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/rm-hull/street-manager-relay/models"
 	"github.com/tavsec/gin-healthcheck/checks"
 )
 

@@ -7,9 +7,9 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/gin-gonic/gin"
-	"github.com/rm-hull/street-manager-relay/generated"
-	"github.com/rm-hull/street-manager-relay/internal"
-	"github.com/rm-hull/street-manager-relay/models"
+	"github.com/map-services/street-manager-relay/generated"
+	"github.com/map-services/street-manager-relay/internal"
+	"github.com/map-services/street-manager-relay/models"
 )
 
 func HandleSNSMessage(repo *internal.DbRepository, certManager internal.CertManager) gin.HandlerFunc {

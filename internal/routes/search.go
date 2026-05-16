@@ -7,9 +7,9 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/gin-gonic/gin"
-	"github.com/rm-hull/street-manager-relay/internal"
-	"github.com/rm-hull/street-manager-relay/internal/promoter"
-	"github.com/rm-hull/street-manager-relay/models"
+	"github.com/map-services/street-manager-relay/internal"
+	"github.com/map-services/street-manager-relay/internal/promoter"
+	"github.com/map-services/street-manager-relay/models"
 )
 
 func HandleSearch(repo *internal.DbRepository, organisations promoter.Organisations) gin.HandlerFunc {

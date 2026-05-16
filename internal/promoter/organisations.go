@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/cockroachdb/errors"
-	"github.com/rm-hull/street-manager-relay/internal"
-	"github.com/rm-hull/street-manager-relay/models"
+	"github.com/map-services/street-manager-relay/internal"
+	"github.com/map-services/street-manager-relay/models"
 )
 
 //go:embed organisations.csv

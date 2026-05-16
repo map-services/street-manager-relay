@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/cockroachdb/errors"
-	"github.com/rm-hull/street-manager-relay/internal/favicon"
-	"github.com/rm-hull/street-manager-relay/internal/promoter"
-	"github.com/rm-hull/street-manager-relay/models"
+	"github.com/map-services/street-manager-relay/internal/favicon"
+	"github.com/map-services/street-manager-relay/internal/promoter"
+	"github.com/map-services/street-manager-relay/models"
 )
 
 func UpdateFaviconsInCSV(csvFile string) error {
