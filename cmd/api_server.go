@@ -17,6 +17,7 @@ import (
 	"github.com/map-services/street-manager-relay/internal/middleware"
 	"github.com/map-services/street-manager-relay/internal/promoter"
 	"github.com/map-services/street-manager-relay/internal/routes"
+	"github.com/rm-hull/godx"
 	"github.com/tavsec/gin-healthcheck/checks"
 
 	"github.com/getsentry/sentry-go"
@@ -27,7 +28,8 @@ import (
 )
 
 func ApiServer(dbPath string, port int, debug bool) {
-	internal.SetupLogger()
+	logger := internal.SetupLogger()
+	godx.Diagnostics(logger)
 
 	organisations, err := promoter.GetPromoterOrgsMap()
 	if err != nil {
@@ -73,7 +75,7 @@ func ApiServer(dbPath string, port int, debug bool) {
 			Timeout:         5 * time.Second,
 		}),
 		gin.Recovery(),
-		middleware.RequestLogger(slog.Default(), "/healthz", "/metrics"),
+		middleware.RequestLogger(logger, "/healthz", "/metrics"),
 		prometheus.Instrument(),
 		compress.Compress(),
 		cors.Default(),

@@ -6,8 +6,9 @@ import (
 )
 
 // SetupLogger configures the default structured JSON logger.
-func SetupLogger() {
+func SetupLogger() *slog.Logger {
 	handler := slog.NewJSONHandler(os.Stdout, nil)
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
+	return logger
 }

@@ -6,7 +6,6 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/map-services/street-manager-relay/cmd"
-	"github.com/rm-hull/godx"
 	"github.com/spf13/cobra"
 )
 
@@ -21,10 +20,6 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
-
-	godx.GitVersion()
-	godx.EnvironmentVars()
-	godx.UserInfo()
 
 	rootCmd := &cobra.Command{
 		Use:  "street-manager-relay",
