@@ -35,13 +35,13 @@ func TestVerifyMessageSignatureURL(t *testing.T) {
 			name:    "invalid domain",
 			url:     "https://malicious-site.com/cert.pem",
 			wantErr: true,
-			msg:     "SigningCertURL host is not a trusted amazonaws.com domain",
+			msg:     "SigningCertURL host is not a trusted AWS SNS domain",
 		},
 		{
 			name:    "subdomain of amazonaws.com but not AWS",
 			url:     "https://fake.amazonaws.com.malicious.com/cert.pem",
 			wantErr: true,
-			msg:     "SigningCertURL host is not a trusted amazonaws.com domain",
+			msg:     "SigningCertURL host is not a trusted AWS SNS domain",
 		},
 		{
 			name:    "invalid URL",

@@ -22,106 +22,6 @@ var searchSQL string
 //go:embed sql/ref_data.sql
 var refDataSQL string
 
-type DbRepository struct {
-	db          *sql.DB
-	searchStmt  *sql.Stmt
-	refDataStmt *sql.Stmt
-}
-
-type Batch struct {
-	tx   *sql.Tx
-	stmt *sql.Stmt
-}
-
-func NewDbRepository(dbPath string) (*DbRepository, error) {
-	db, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open database")
-	}
-
-	if err = db.Ping(); err != nil {
-		return nil, errors.Wrap(err, "failed to connect to database")
-	}
-
-	err = create(db)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create database")
-	}
-
-	searchStmt, err := db.Prepare(searchSQL)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare search SQL")
-	}
-
-	refDataStmt, err := db.Prepare(refDataSQL)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare ref-data SQL")
-	}
-
-	slog.Info("Database initialized successfully", "path", dbPath)
-	return &DbRepository{
-		db:          db,
-		searchStmt:  searchStmt,
-		refDataStmt: refDataStmt,
-	}, nil
-}
-
-func create(db *sql.DB) error {
-	exists, err := tablesExists(db, "events")
-	if err != nil {
-		return errors.Wrap(err, "error checking if table exists")
-	}
-	if exists {
-		return nil
-	}
-	_, err = db.Exec(createSQL)
-	return err
-}
-
-func tablesExists(db *sql.DB, table string) (bool, error) {
-	var exists bool
-	query := "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name=?)"
-	err := db.QueryRow(query, table).Scan(&exists)
-	if err != nil && err != sql.ErrNoRows {
-		return false, err
-	}
-	return exists, nil
-}
-
-func (repo *DbRepository) RefData() (*models.RefData, error) {
-	refData := make(models.RefData)
-
-	rows, err := repo.refDataStmt.Query()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to execute refData query")
-	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			slog.Error("Error closing rows", "error", err)
-		}
-	}()
-
-	var facet string
-	var value sql.NullString
-	var count int
-
-	for rows.Next() {
-		if err := rows.Scan(&facet, &value, &count); err != nil {
-			return nil, errors.Wrap(err, "failed to scan row")
-		}
-
-		if _, ok := refData[facet]; !ok {
-			refData[facet] = make(map[string]int)
-		}
-		v := ""
-		if value.Valid {
-			v = value.String
-		}
-		refData[facet][v] = count
-	}
-	return &refData, nil
-}
-
 var eventColumns = []string{
 	// Identifiers
 	"event_type",
@@ -195,6 +95,136 @@ var eventColumns = []string{
 	"collaboration_type_ref",
 	"close_footway",
 	"close_footway_ref",
+}
+
+type DbRepository struct {
+	db          *sql.DB
+	searchStmt  *sql.Stmt
+	refDataStmt *sql.Stmt
+	upsertStmt  *sql.Stmt
+}
+
+type Batch struct {
+	tx   *sql.Tx
+	stmt *sql.Stmt
+}
+
+func NewDbRepository(dbPath string) (*DbRepository, error) {
+	db, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open database")
+	}
+
+	if err = db.Ping(); err != nil {
+		return nil, errors.Wrap(err, "failed to connect to database")
+	}
+
+	err = create(db)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create database")
+	}
+
+	searchStmt, err := db.Prepare(searchSQL)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to prepare search SQL")
+	}
+
+	refDataStmt, err := db.Prepare(refDataSQL)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to prepare ref-data SQL")
+	}
+
+	upsertStmt, err := db.Prepare(buildUpsertQuery())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to prepare upsert SQL")
+	}
+
+	slog.Info("Database initialized successfully", "path", dbPath)
+	return &DbRepository{
+		db:          db,
+		searchStmt:  searchStmt,
+		refDataStmt: refDataStmt,
+		upsertStmt:  upsertStmt,
+	}, nil
+}
+
+func buildUpsertQuery() string {
+	placeholders := make([]string, len(eventColumns))
+	for i := range eventColumns {
+		placeholders[i] = "?"
+	}
+
+	updateSet := make([]string, 0, len(eventColumns)-1)
+	for _, col := range eventColumns {
+		if col == "object_reference" {
+			continue
+		}
+		updateSet = append(updateSet, fmt.Sprintf("%s=excluded.%s", col, col))
+	}
+
+	return fmt.Sprintf(`
+		INSERT INTO events (%s)
+		VALUES (%s)
+		ON CONFLICT(object_reference) DO UPDATE SET
+		%s
+		RETURNING id;
+	`, strings.Join(eventColumns, ", "), strings.Join(placeholders, ", "), strings.Join(updateSet, ", "))
+}
+
+func create(db *sql.DB) error {
+	exists, err := tablesExists(db, "events")
+	if err != nil {
+		return errors.Wrap(err, "error checking if table exists")
+	}
+	if exists {
+		return nil
+	}
+	_, err = db.Exec(createSQL)
+	return err
+}
+
+func tablesExists(db *sql.DB, table string) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name=?)"
+	err := db.QueryRow(query, table).Scan(&exists)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+	return exists, nil
+}
+
+func (repo *DbRepository) RefData() (*models.RefData, error) {
+	refData := make(models.RefData)
+
+	rows, err := repo.refDataStmt.Query()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to execute refData query")
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("Error closing rows", "error", err)
+		}
+	}()
+
+	var facet string
+	var value sql.NullString
+	var count int
+
+	for rows.Next() {
+		if err := rows.Scan(&facet, &value, &count); err != nil {
+			return nil, errors.Wrap(err, "failed to scan row")
+		}
+
+		if _, ok := refData[facet]; !ok {
+			refData[facet] = make(map[string]int)
+		}
+		v := ""
+		if value.Valid {
+			v = value.String
+		}
+		refData[facet][v] = count
+	}
+	return &refData, nil
 }
 
 func (repo *DbRepository) Search(bbox *models.BBox, facets *models.Facets, temporalFilters *models.TemporalFilters) ([]*models.Event, error) {
@@ -428,56 +458,14 @@ func (repo *DbRepository) UpsertSingle(event *models.Event) (int64, error) {
 }
 
 func (repo *DbRepository) BatchUpsert() (*Batch, error) {
-	placeholders := make([]string, len(eventColumns))
-	for i := range eventColumns {
-		placeholders[i] = "?"
-	}
-
-	// Build the ON CONFLICT update set clauses
-	updateSet := make([]string, len(eventColumns)-1) // exclude the unique key (object_reference)
-	for i, col := range eventColumns {
-		if col == "object_reference" {
-			continue
-		}
-		// Adjust index because we're skipping object_reference
-		idx := i
-		if i > 1 { // object_reference is at index 1
-			idx = i - 1
-		} else if i == 1 {
-			continue
-		}
-		updateSet[idx] = fmt.Sprintf("%s=excluded.%s", col, col)
-	}
-	// Re-build updateSet without the gap
-	updateSet = nil
-	for _, col := range eventColumns {
-		if col == "object_reference" {
-			continue
-		}
-		updateSet = append(updateSet, fmt.Sprintf("%s=excluded.%s", col, col))
-	}
-
-	query := fmt.Sprintf(`
-		INSERT INTO events (%s)
-		VALUES (%s)
-		ON CONFLICT(object_reference) DO UPDATE SET
-		%s
-		RETURNING id;
-	`, strings.Join(eventColumns, ", "), strings.Join(placeholders, ", "), strings.Join(updateSet, ", "))
-
 	tx, err := repo.db.Begin()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to begin transaction")
 	}
 
-	stmt, err := tx.Prepare(query)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare statement")
-	}
-
 	return &Batch{
 		tx:   tx,
-		stmt: stmt,
+		stmt: tx.Stmt(repo.upsertStmt),
 	}, nil
 }
 
@@ -540,6 +528,12 @@ func (repo *DbRepository) Close() error {
 	if repo.refDataStmt != nil {
 		if err := repo.refDataStmt.Close(); err != nil {
 			return errors.Wrap(err, "failed to close ref-data db statement")
+		}
+	}
+
+	if repo.upsertStmt != nil {
+		if err := repo.upsertStmt.Close(); err != nil {
+			return errors.Wrap(err, "failed to close upsert db statement")
 		}
 	}
 
