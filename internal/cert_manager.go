@@ -61,7 +61,7 @@ func (cm *CachedCertManager) download(certURL string) (string, error) {
 		return "", errors.Newf("error fetching certificate: HTTP %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // Limit to 1MB to prevent potential DoS
 	if err != nil {
 		return "", errors.Wrap(err, "error reading certificate response")
 	}
