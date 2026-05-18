@@ -1,17 +1,18 @@
 package middleware
 
 import (
+	"bytes"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/map-services/street-manager-relay/internal"
 )
 
 func TestRequestLogger(t *testing.T) {
-	buf, logger := internal.SetupSlogBuffer()
+	buf, logger := setupSlogBuffer()
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -43,3 +44,9 @@ func TestRequestLogger(t *testing.T) {
 	}
 }
 
+// SetupSlogBuffer returns a buffer and a logger that writes JSON to it.
+func setupSlogBuffer() (*bytes.Buffer, *slog.Logger) {
+	buf := new(bytes.Buffer)
+	handler := slog.NewJSONHandler(buf, nil)
+	return buf, slog.New(handler)
+}

@@ -2,37 +2,40 @@ package middleware
 
 import (
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 // RequestLogger returns a Gin middleware that logs HTTP requests in structured JSON.
-func RequestLogger(logger *slog.Logger, ignoredPaths ...string) gin.HandlerFunc {
-	ignored := make(map[string]struct{})
-	for _, path := range ignoredPaths {
-		ignored[path] = struct{}{}
-	}
-
+func RequestLogger(logger *slog.Logger, excludedPaths ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
+		raw := c.Request.URL.RawQuery
 
 		c.Next()
 
-		if _, ok := ignored[path]; ok {
+		if slices.Contains(excludedPaths, c.Request.URL.Path) {
 			return
+		}
+
+		if raw != "" {
+			path = path + "?" + raw
 		}
 
 		end := time.Now()
 		latency := end.Sub(start)
 
-		logger.Info("HTTP request",
+		logger.Info("request",
 			"method", c.Request.Method,
 			"path", path,
 			"status", c.Writer.Status(),
-			"latency", latency.String(),
-			"client_ip", c.ClientIP(),
+			"latency_ms", latency.Milliseconds(),
+			"ip", c.ClientIP(),
+			"user_agent", c.Request.UserAgent(),
+			"body_size", c.Writer.Size(),
 		)
 	}
 }
