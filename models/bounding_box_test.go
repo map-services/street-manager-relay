@@ -2,6 +2,9 @@ package models
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBoundingBoxFromWKT(t *testing.T) {
@@ -49,13 +52,75 @@ func TestBoundingBoxFromWKT(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bbox, err := BoundingBoxFromWKT(tt.wkt)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			require.NoError(t, err)
+			assert.True(t, bbox.Equals(tt.expected, tol), "got %+v, want %+v", bbox, tt.expected)
+		})
+	}
+}
 
-			if !bbox.Equals(tt.expected, tol) {
-				t.Errorf("got %+v, want %+v", bbox, tt.expected)
-			}
+func TestBoundingBoxFromWKT_Error(t *testing.T) {
+	_, err := BoundingBoxFromWKT("INVALID WKT")
+	assert.Error(t, err)
+}
+
+func TestBoundingBoxFromCSV(t *testing.T) {
+	tests := []struct {
+		name     string
+		csv      string
+		expected BBox
+	}{
+		{
+			name: "Standard",
+			csv:  "0, 0, 10, 5",
+			expected: BBox{
+				MinX: 0, MaxX: 10,
+				MinY: 0, MaxY: 5,
+			},
+		},
+		{
+			name: "Reversed",
+			csv:  "10, 5, 0, 0",
+			expected: BBox{
+				MinX: 0, MaxX: 10,
+				MinY: 0, MaxY: 5,
+			},
+		},
+	}
+
+	const tol = 1e-9
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bbox, err := BoundingBoxFromCSV(tt.csv)
+			require.NoError(t, err)
+			assert.True(t, bbox.Equals(tt.expected, tol), "got %+v, want %+v", bbox, tt.expected)
+		})
+	}
+}
+
+func TestBoundingBoxFromCSV_Error(t *testing.T) {
+	tests := []struct {
+		name string
+		csv  string
+	}{
+		{
+			name: "Too few values",
+			csv:  "0,0,0",
+		},
+		{
+			name: "Too many values",
+			csv:  "0,0,0,0,0",
+		},
+		{
+			name: "Invalid float",
+			csv:  "0,0,0,abc",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := BoundingBoxFromCSV(tt.csv)
+			assert.Error(t, err)
 		})
 	}
 }
