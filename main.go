@@ -1,12 +1,12 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"math"
+	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/map-services/street-manager-relay/cmd"
-	"github.com/rm-hull/godx"
 	"github.com/spf13/cobra"
 )
 
@@ -19,12 +19,8 @@ func main() {
 	var filePath string
 
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
+		slog.Info("No .env file found")
 	}
-
-	godx.GitVersion()
-	godx.EnvironmentVars()
-	godx.UserInfo()
 
 	rootCmd := &cobra.Command{
 		Use:  "street-manager-relay",
@@ -50,7 +46,8 @@ func main() {
 		Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
 			if err := cmd.BulkLoader(dbPath, args[0], maxFiles); err != nil {
-				log.Fatalf("Failed to run bulk loader: %v", err)
+				slog.Error("Failed to run bulk loader", "error", err)
+				os.Exit(1)
 			}
 		},
 	}
@@ -62,7 +59,8 @@ func main() {
 		Short: "Regenerate Indexes",
 		Run: func(_ *cobra.Command, _ []string) {
 			if err := cmd.RegenerateIndex(dbPath); err != nil {
-				log.Fatalf("Regenerate index failed: %v", err)
+				slog.Error("Regenerate index failed", "error", err)
+				os.Exit(1)
 			}
 		},
 	}
@@ -72,7 +70,8 @@ func main() {
 		Short: "Update favicons",
 		Run: func(_ *cobra.Command, _ []string) {
 			if err := cmd.UpdateFaviconsInCSV(filePath); err != nil {
-				log.Fatalf("Update favicons failed: %v", err)
+				slog.Error("Update favicons failed", "error", err)
+				os.Exit(1)
 			}
 		},
 	}
