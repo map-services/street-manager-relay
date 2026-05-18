@@ -4,13 +4,18 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/cockroachdb/errors"
 )
 
+var httpClient = &http.Client{
+	Timeout: 10 * time.Second,
+}
+
 // FetchURL makes a GET request to the provided URL and returns the body as a string.
 func FetchURL(url string) (string, error) {
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return "", errors.Wrapf(err, "error fetching URL: %s", url)
 	}

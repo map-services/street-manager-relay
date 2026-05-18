@@ -38,7 +38,7 @@ func (cm *CachedCertManager) verifyMessageSignatureURL(certURL string) error {
 		return errors.New("SigningCertURL was not using HTTPS")
 	}
 
-if !strings.HasPrefix(parsedURL.Host, "sns.") || (!strings.HasSuffix(parsedURL.Host, ".amazonaws.com") && !strings.HasSuffix(parsedURL.Host, ".amazonaws.com.cn")) {
+	if !strings.HasPrefix(parsedURL.Host, "sns.") || !strings.HasSuffix(parsedURL.Host, ".amazonaws.com") {
 		return errors.New("SigningCertURL host is not a trusted AWS SNS domain")
 	}
 

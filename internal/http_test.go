@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -65,5 +66,21 @@ func TestFetchURL(t *testing.T) {
 		_, err := FetchURL("http://localhost:12345/unreachable")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "error fetching URL")
+	})
+
+	t.Run("timeout", func(t *testing.T) {
+		originalTimeout := httpClient.Timeout
+		httpClient.Timeout = 100 * time.Millisecond
+		defer func() { httpClient.Timeout = originalTimeout }()
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(200 * time.Millisecond)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		_, err := FetchURL(server.URL)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "Client.Timeout exceeded")
 	})
 }
