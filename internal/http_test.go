@@ -11,16 +11,16 @@ import (
 
 func TestFetchURL(t *testing.T) {
 	tests := []struct {
-		name       string
-		handler    http.HandlerFunc
-		wantErr    bool
-		expected   string
-		errMsg     string
+		name     string
+		handler  http.HandlerFunc
+		wantErr  bool
+		expected string
+		errMsg   string
 	}{
 		{
 			name: "success",
 			handler: func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprint(w, "success body")
+				_, _ = fmt.Fprint(w, "success body")
 			},
 			wantErr:  false,
 			expected: "success body",
