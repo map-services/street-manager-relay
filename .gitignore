@@ -36,3 +36,10 @@ generated/
 street-manager-relay
 __debug_bin*
 data/
+
+# gemini-cli settings
+.gemini/
+gemini-artifacts/
+
+# GitHub App credentials
+gha-creds-*.json
