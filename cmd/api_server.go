@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kofalt/go-memoize"
 	"github.com/map-services/street-manager-relay/internal"
+	"github.com/map-services/street-manager-relay/internal/middleware"
 	"github.com/map-services/street-manager-relay/internal/promoter"
 	"github.com/map-services/street-manager-relay/internal/routes"
 	"github.com/tavsec/gin-healthcheck/checks"
@@ -26,19 +27,22 @@ import (
 )
 
 func ApiServer(dbPath string, port int, debug bool) {
+	internal.SetupLogger()
 
 	organisations, err := promoter.GetPromoterOrgsMap()
 	if err != nil {
-		log.Fatalf("failed to initialize promoter organisations: %v", err)
+		slog.Error("failed to initialize promoter organisations", "error", err)
+		os.Exit(1)
 	}
 
 	repo, err := internal.NewDbRepository(dbPath)
 	if err != nil {
-		log.Fatalf("Failed to initialize db repository: %v", err)
+		slog.Error("Failed to initialize db repository", "error", err)
+		os.Exit(1)
 	}
 	defer func() {
 		if err := repo.Close(); err != nil {
-			log.Printf("Error closing database: %v", err)
+			slog.Error("Error closing database", "error", err)
 		}
 	}()
 
@@ -49,7 +53,8 @@ func ApiServer(dbPath string, port int, debug bool) {
 		Environment: os.Getenv("MODE"),
 	})
 	if err != nil {
-		log.Fatalf("sentry.Init: %s", err)
+		slog.Error("sentry.Init", "error", err)
+		os.Exit(1)
 	}
 	defer sentry.Flush(2 * time.Second)
 
@@ -68,7 +73,7 @@ func ApiServer(dbPath string, port int, debug bool) {
 			Timeout:         5 * time.Second,
 		}),
 		gin.Recovery(),
-		gin.LoggerWithWriter(gin.DefaultWriter, "/healthz", "/metrics"),
+		middleware.RequestLogger(slog.Default(), "/healthz", "/metrics"),
 		prometheus.Instrument(),
 		compress.Compress(),
 		cors.Default(),
@@ -76,7 +81,7 @@ func ApiServer(dbPath string, port int, debug bool) {
 	)
 
 	if debug {
-		log.Println("WARNING: pprof endpoints are enabled and exposed. Do not run with this flag in production.")
+		slog.Warn("pprof endpoints are enabled and exposed. Do not run with this flag in production.")
 		pprof.Register(r)
 	}
 
@@ -84,7 +89,8 @@ func ApiServer(dbPath string, port int, debug bool) {
 		repo.HealthCheck(),
 	})
 	if err != nil {
-		log.Fatalf("failed to initialize healthcheck: %v", err)
+		slog.Error("failed to initialize healthcheck", "error", err)
+		os.Exit(1)
 	}
 
 	certManager := internal.NewCertManager(memoize.NewMemoizer(24*time.Hour, 1*time.Hour))
@@ -94,9 +100,10 @@ func ApiServer(dbPath string, port int, debug bool) {
 	r.GET("/v1/street-manager-relay/refdata", routes.HandleRefData(repo, memoize.NewMemoizer(10*time.Minute, 1*time.Hour)))
 
 	addr := fmt.Sprintf(":%d", port)
-	log.Printf("Starting HTTP API Server on port %d...", port)
+	slog.Info("Starting HTTP API Server", "port", port)
 	err = r.Run(addr)
-	log.Fatalf("HTTP API Server failed to start on port %d: %v", port, err)
+	slog.Error("HTTP API Server failed to start", "port", port, "error", err)
+	os.Exit(1)
 }
 
 func sentryErrorHandler() gin.HandlerFunc {

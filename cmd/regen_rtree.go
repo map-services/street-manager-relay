@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"log"
+	"log/slog"
 
 	"github.com/cockroachdb/errors"
 	"github.com/map-services/street-manager-relay/internal"
@@ -14,7 +14,7 @@ func RegenerateIndex(dbPath string) error {
 	}
 	defer func() {
 		if err := repo.Close(); err != nil {
-			log.Printf("Error closing database: %v", err)
+			slog.Error("Error closing database", "error", err)
 		}
 	}()
 
@@ -24,9 +24,9 @@ func RegenerateIndex(dbPath string) error {
 	}
 
 	if total > 0 {
-		log.Printf("Affected records: %d/%d (%.1f %%)", affected, total, float64(affected)/float64(total)*100.0)
+		slog.Info("Affected records", "affected", affected, "total", total, "percentage", float64(affected)/float64(total)*100.0)
 	} else {
-		log.Printf("No records found to process.")
+		slog.Info("No records found to process.")
 	}
 
 	return nil
