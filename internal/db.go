@@ -4,13 +4,13 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/map-services/street-manager-relay/models"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/rm-hull/street-manager-relay/models"
 	"github.com/tavsec/gin-healthcheck/checks"
 )
 
@@ -59,7 +59,7 @@ func NewDbRepository(dbPath string) (*DbRepository, error) {
 		return nil, errors.Wrap(err, "failed to prepare ref-data SQL")
 	}
 
-	log.Printf("Database initialized successfully: %s", dbPath)
+	slog.Info("Database initialized successfully", "path", dbPath)
 	return &DbRepository{
 		db:          db,
 		searchStmt:  searchStmt,
@@ -98,7 +98,7 @@ func (repo *DbRepository) RefData() (*models.RefData, error) {
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Printf("Error closing rows: %v", err)
+			slog.Error("Error closing rows", "error", err)
 		}
 	}()
 
@@ -135,7 +135,7 @@ func (repo *DbRepository) Search(bbox *models.BBox, facets *models.Facets, tempo
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Printf("Error closing rows: %v", err)
+			slog.Error("Error closing rows", "error", err)
 		}
 	}()
 
@@ -545,7 +545,7 @@ func (repo *DbRepository) RegenerateIndex() (int, int, error) {
 	defer func() {
 		// Rollback will have no effect if commit was already called
 		if err := tx.Rollback(); err != nil {
-			log.Printf("Rollback: %v", err)
+			slog.Error("Rollback error", "error", err)
 		}
 	}()
 
@@ -574,7 +574,7 @@ func (repo *DbRepository) RegenerateIndex() (int, int, error) {
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Printf("Error closing rows: %v", err)
+			slog.Error("Error closing rows", "error", err)
 		}
 	}()
 
@@ -596,7 +596,7 @@ func (repo *DbRepository) RegenerateIndex() (int, int, error) {
 		}
 
 		if !regen.Equals(bbox, 1) {
-			log.Printf("Record %d needs bbox regen: %v doesnt match stored: %v", id, regen, bbox)
+			slog.Info("Record needs bbox regen", "id", id, "regen", regen, "stored", bbox)
 			affected++
 
 			res, err := updateStmt.Exec(regen.MinX, regen.MaxX, regen.MinY, regen.MaxY, id)

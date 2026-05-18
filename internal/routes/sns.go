@@ -2,14 +2,14 @@ package routes
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/cockroachdb/errors"
 	"github.com/gin-gonic/gin"
-	"github.com/rm-hull/street-manager-relay/generated"
-	"github.com/rm-hull/street-manager-relay/internal"
-	"github.com/rm-hull/street-manager-relay/models"
+	"github.com/map-services/street-manager-relay/generated"
+	"github.com/map-services/street-manager-relay/internal"
+	"github.com/map-services/street-manager-relay/models"
 )
 
 func HandleSNSMessage(repo *internal.DbRepository, certManager internal.CertManager) gin.HandlerFunc {
@@ -65,7 +65,7 @@ func handleMessage(repo *internal.DbRepository, body *internal.SNSMessage) error
 	case "Notification":
 		return handleNotification(repo, body)
 	default:
-		log.Printf("Unknown message type: %s", body.Type)
+		slog.Warn("Unknown message type", "type", body.Type)
 		return nil
 	}
 }
@@ -78,7 +78,7 @@ func confirmSubscription(subscriptionURL string) error {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("error closing response body: %v", err)
+			slog.Error("error closing response body", "error", err)
 		}
 	}()
 
@@ -86,7 +86,7 @@ func confirmSubscription(subscriptionURL string) error {
 		return errors.Newf("subscription confirmation failed with HTTP %d", resp.StatusCode)
 	}
 
-	log.Println("Subscription confirmed")
+	slog.Info("Subscription confirmed")
 	return nil
 }
 

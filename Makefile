@@ -33,7 +33,7 @@ generate: $(GO_BINDINGS)
 # Generate individual Go bindings
 $(GENERATED_DIR)/event_notifier_message.go: $(GENERATED_DIR)/event-notifier-message.json
 	@echo "Generating Go bindings for event_notifier_message.go..."
-	npx quicktype --src-lang schema $< --out $@ --lang go --package $(PACKAGE_NAME)
+	npx -y quicktype --src-lang schema $< --out $@ --lang go --package $(PACKAGE_NAME)
 
 # Build the Go binary
 build: $(BINARY_NAME)

@@ -2,7 +2,7 @@ package internal
 
 import (
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 
@@ -42,7 +42,7 @@ func (cm *CachedCertManager) verifyMessageSignatureURL(certURL string) error {
 }
 
 func (cm *CachedCertManager) download(certURL string) (string, error) {
-	log.Printf("Downloading certificate: %s", certURL)
+	slog.Info("Downloading certificate", "url", certURL)
 	if err := cm.verifyMessageSignatureURL(certURL); err != nil {
 		return "", errors.Wrap(err, "failed to verify signature URL")
 	}
@@ -53,7 +53,7 @@ func (cm *CachedCertManager) download(certURL string) (string, error) {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("error closing response body: %v", err)
+			slog.Error("error closing response body", "error", err)
 		}
 	}()
 

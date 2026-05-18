@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/rm-hull/street-manager-relay/generated"
+	"github.com/map-services/street-manager-relay/generated"
 )
 
 type Event struct {

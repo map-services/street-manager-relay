@@ -88,7 +88,7 @@ jobs:
         uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: "Log into registry: ${{ env.REGISTRY }}"
         if: github.event_name != 'pull_request'
@@ -100,7 +100,7 @@ jobs:
 
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -111,12 +111,13 @@ jobs:
             type=sha
           labels: |
             maintainer=rm-hull
-            org.opencontainers.image.description=REST API for GPS routes
+            org.opencontainers.image.description=Geoloc relay for the GOV.UK Street Manager API
+            org.opencontainers.image.source="https://github.com/map-services/street-manager-relay"
             org.opencontainers.image.licenses=MIT
 
       - name: Build and push Docker image
         id: build-and-push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64 #,linux/arm64

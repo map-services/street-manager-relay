@@ -1,12 +1,12 @@
 package routes
 
 import (
-	"log"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kofalt/go-memoize"
-	"github.com/rm-hull/street-manager-relay/internal"
-	"github.com/rm-hull/street-manager-relay/models"
+	"github.com/map-services/street-manager-relay/internal"
+	"github.com/map-services/street-manager-relay/models"
 )
 
 func HandleRefData(repo *internal.DbRepository, cache *memoize.Memoizer) gin.HandlerFunc {
@@ -16,7 +16,7 @@ func HandleRefData(repo *internal.DbRepository, cache *memoize.Memoizer) gin.Han
 			return repo.RefData()
 		})
 		if err != nil {
-			log.Printf("Error fetching reference data: %v", err)
+			slog.Error("Error fetching reference data", "error", err)
 			c.JSON(500, gin.H{"error": "Failed to fetch reference data"})
 			return
 		}

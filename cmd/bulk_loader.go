@@ -2,14 +2,14 @@ package cmd
 
 import (
 	"io/fs"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/cockroachdb/errors"
-	"github.com/rm-hull/street-manager-relay/generated"
-	"github.com/rm-hull/street-manager-relay/internal"
-	"github.com/rm-hull/street-manager-relay/models"
+	"github.com/map-services/street-manager-relay/generated"
+	"github.com/map-services/street-manager-relay/internal"
+	"github.com/map-services/street-manager-relay/models"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -25,11 +25,11 @@ func BulkLoader(dbPath string, folder string, maxRecords int) error {
 	}
 	defer func() {
 		if err := repo.Close(); err != nil {
-			log.Printf("Error closing database: %v", err)
+			slog.Error("Error closing database", "error", err)
 		}
 	}()
 
-	log.Println("Finding files to import...")
+	slog.Info("Finding files to import...")
 	files, err := walkFiles(folder, maxRecords)
 	if err != nil {
 		return errors.Wrap(err, "failed to import data")
@@ -39,7 +39,7 @@ func BulkLoader(dbPath string, folder string, maxRecords int) error {
 	totalRecords := int64(len(files))
 	var bar *progressbar.ProgressBar
 	if isDocker {
-		log.Println("Detected likely running inside docker container")
+		slog.Info("Detected likely running inside docker container")
 		bar = progressbar.DefaultSilent(totalRecords)
 	} else {
 		bar = progressbar.Default(totalRecords)
@@ -64,7 +64,7 @@ func BulkLoader(dbPath string, folder string, maxRecords int) error {
 		}
 
 		if isDocker && idx%37 == 0 {
-			log.Printf("Processed %d records...\n", idx)
+			slog.Info("Processed records", "count", idx)
 		}
 	}
 	return batch.Done()
