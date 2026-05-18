@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -50,8 +51,8 @@ func IsValidSignature(body *SNSMessage, certManager CertManager) (bool, error) {
 }
 
 func verifyMessageSignatureVersion(version string) error {
-	if version != "1" {
-		return errors.New("signature verification failed")
+	if version != "1" && version != "2" {
+		return errors.Newf("unsupported signature version: %s", version)
 	}
 	return nil
 }
@@ -77,68 +78,69 @@ func validateSignature(message *SNSMessage, certificate string) (bool, error) {
 		return false, errors.New("unable to build message to sign")
 	}
 
-	hash := sha1.Sum([]byte(messageToSign))
+	var hashAlgorithm crypto.Hash
+	var digest []byte
+
+	if message.SignatureVersion == "2" {
+		h := sha256.Sum256([]byte(messageToSign))
+		digest = h[:]
+		hashAlgorithm = crypto.SHA256
+	} else {
+		h := sha1.Sum([]byte(messageToSign))
+		digest = h[:]
+		hashAlgorithm = crypto.SHA1
+	}
 
 	signature, err := base64.StdEncoding.DecodeString(message.Signature)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to decode signature")
 	}
 
-	err = rsa.VerifyPKCS1v15(rsaPubKey, crypto.SHA1, hash[:], signature)
+	err = rsa.VerifyPKCS1v15(rsaPubKey, hashAlgorithm, digest, signature)
 	return err == nil, nil
 }
 
 func getMessageToSign(body *SNSMessage) string {
+	var keys []string
 	switch body.Type {
-	case "SubscriptionConfirmation":
-		return buildSubscriptionStringToSign(body)
+	case "SubscriptionConfirmation", "UnsubscribeConfirmation":
+		keys = []string{"Message", "MessageId", "SubscribeURL", "Timestamp", "Token", "TopicArn", "Type"}
 	case "Notification":
-		return buildNotificationStringToSign(body)
+		keys = []string{"Message", "MessageId", "Subject", "Timestamp", "TopicArn", "Type"}
 	default:
 		return ""
 	}
-}
 
-func buildNotificationStringToSign(body *SNSMessage) string {
 	var builder strings.Builder
-
-	builder.WriteString("Message\n")
-	builder.WriteString(body.Message + "\n")
-	builder.WriteString("MessageId\n")
-	builder.WriteString(body.MessageId + "\n")
-
-	if body.Subject != "" {
-		builder.WriteString("Subject\n")
-		builder.WriteString(body.Subject + "\n")
+	for _, key := range keys {
+		val := getFieldValue(body, key)
+		if val != "" {
+			builder.WriteString(key + "\n")
+			builder.WriteString(val + "\n")
+		}
 	}
-
-	builder.WriteString("Timestamp\n")
-	builder.WriteString(body.Timestamp + "\n")
-	builder.WriteString("TopicArn\n")
-	builder.WriteString(body.TopicArn + "\n")
-	builder.WriteString("Type\n")
-	builder.WriteString(body.Type + "\n")
-
 	return builder.String()
 }
 
-func buildSubscriptionStringToSign(body *SNSMessage) string {
-	var builder strings.Builder
-
-	builder.WriteString("Message\n")
-	builder.WriteString(body.Message + "\n")
-	builder.WriteString("MessageId\n")
-	builder.WriteString(body.MessageId + "\n")
-	builder.WriteString("SubscribeURL\n")
-	builder.WriteString(body.SubscribeURL + "\n")
-	builder.WriteString("Timestamp\n")
-	builder.WriteString(body.Timestamp + "\n")
-	builder.WriteString("Token\n")
-	builder.WriteString(body.Token + "\n")
-	builder.WriteString("TopicArn\n")
-	builder.WriteString(body.TopicArn + "\n")
-	builder.WriteString("Type\n")
-	builder.WriteString(body.Type + "\n")
-
-	return builder.String()
+func getFieldValue(body *SNSMessage, key string) string {
+	switch key {
+	case "Message":
+		return body.Message
+	case "MessageId":
+		return body.MessageId
+	case "Subject":
+		return body.Subject
+	case "SubscribeURL":
+		return body.SubscribeURL
+	case "Timestamp":
+		return body.Timestamp
+	case "Token":
+		return body.Token
+	case "TopicArn":
+		return body.TopicArn
+	case "Type":
+		return body.Type
+	default:
+		return ""
+	}
 }

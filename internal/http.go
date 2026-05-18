@@ -1,0 +1,33 @@
+package internal
+
+import (
+	"io"
+	"log/slog"
+	"net/http"
+
+	"github.com/cockroachdb/errors"
+)
+
+// FetchURL makes a GET request to the provided URL and returns the body as a string.
+func FetchURL(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", errors.Wrapf(err, "error fetching URL: %s", url)
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Error("error closing response body", "url", url, "error", err)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.Newf("error fetching URL: %s, status code: %d", url, resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.Wrapf(err, "error reading response body from: %s", url)
+	}
+
+	return string(body), nil
+}
