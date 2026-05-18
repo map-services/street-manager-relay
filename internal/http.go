@@ -24,7 +24,7 @@ func FetchURL(url string) (string, error) {
 		return "", errors.Newf("error fetching URL: %s, status code: %d", url, resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // Limit to 1MB to prevent potential DoS
 	if err != nil {
 		return "", errors.Wrapf(err, "error reading response body from: %s", url)
 	}

@@ -9,7 +9,7 @@ import (
 
 func TestEventMapping(t *testing.T) {
 	event := &models.Event{}
-	
+
 	pointers := eventPointers(event)
 	values := eventValues(event)
 
@@ -21,10 +21,10 @@ func TestEventMapping(t *testing.T) {
 	foo := "bar"
 	event.EventType = foo
 	values = eventValues(event)
-	
+
 	// Value at index 0 should be EventType
 	assert.Equal(t, foo, values[0])
-	
+
 	// Updating via pointer should update the struct
 	p := pointers[0].(*string)
 	*p = "baz"
