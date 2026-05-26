@@ -36,11 +36,11 @@ func TestEventMapping(t *testing.T) {
 
 func TestDbRepository_Upsert(t *testing.T) {
 	dbPath := "test_upsert.db"
-	defer os.Remove(dbPath)
+	defer func() { _ = os.Remove(dbPath) }()
 
 	repo, err := NewDbRepository(dbPath)
 	require.NoError(t, err)
-	defer repo.Close()
+	defer func(){ _ = repo.Close() }()
 
 	street1 := "High Street"
 	coords1 := "POINT(0.1278 51.5074)"
