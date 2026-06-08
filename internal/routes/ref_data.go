@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"log/slog"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kofalt/go-memoize"
@@ -16,8 +16,7 @@ func HandleRefData(repo *internal.DbRepository, cache *memoize.Memoizer) gin.Han
 			return repo.RefData()
 		})
 		if err != nil {
-			slog.Error("Error fetching reference data", "error", err)
-			c.JSON(500, gin.H{"error": "Failed to fetch reference data"})
+			abortWithError(c, http.StatusInternalServerError, "Failed to fetch reference data", err)
 			return
 		}
 

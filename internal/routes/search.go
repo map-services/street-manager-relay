@@ -34,8 +34,7 @@ func HandleSearch(repo *internal.DbRepository, organisations promoter.Organisati
 
 		events, err := repo.Search(bbox, facets, temporalFilters)
 		if err != nil {
-			_ = c.Error(errors.Wrap(err, "error searching events"))
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to search events"})
+			abortWithError(c, http.StatusInternalServerError, "Failed to search events", errors.Wrap(err, "error searching events"))
 			return
 		}
 

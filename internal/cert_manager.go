@@ -1,10 +1,9 @@
 package internal
 
 import (
-	"io"
 	"log/slog"
-	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/kofalt/go-memoize"
@@ -38,6 +37,11 @@ func (cm *CachedCertManager) verifyMessageSignatureURL(certURL string) error {
 	if parsedURL.Scheme != "https" {
 		return errors.New("SigningCertURL was not using HTTPS")
 	}
+
+	if !strings.HasPrefix(parsedURL.Host, "sns.") || !strings.HasSuffix(parsedURL.Host, ".amazonaws.com") {
+		return errors.New("SigningCertURL host is not a trusted AWS SNS domain")
+	}
+
 	return nil
 }
 
@@ -47,24 +51,5 @@ func (cm *CachedCertManager) download(certURL string) (string, error) {
 		return "", errors.Wrap(err, "failed to verify signature URL")
 	}
 
-	resp, err := http.Get(certURL)
-	if err != nil {
-		return "", errors.Wrap(err, "error fetching certificate")
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			slog.Error("error closing response body", "error", err)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", errors.Newf("error fetching certificate: HTTP %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // Limit to 1MB to prevent potential DoS
-	if err != nil {
-		return "", errors.Wrap(err, "error reading certificate response")
-	}
-
-	return string(body), nil
+	return FetchURL(certURL)
 }

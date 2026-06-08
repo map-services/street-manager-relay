@@ -16,41 +16,35 @@ func HandleSNSMessage(repo *internal.DbRepository, certManager internal.CertMana
 	return func(c *gin.Context) {
 		messageType := c.GetHeader("x-amz-sns-message-type")
 		if messageType == "" {
-			_ = c.Error(errors.New("missing x-amz-sns-message-type header"))
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Missing x-amz-sns-message-type header"})
+			abortWithError(c, http.StatusBadRequest, "Missing x-amz-sns-message-type header", errors.New("missing x-amz-sns-message-type header"))
 			return
 		}
 
 		bodyBytes, err := c.GetRawData()
 		if err != nil {
-			_ = c.Error(errors.Wrap(err, "error reading request body"))
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+			abortWithError(c, http.StatusBadRequest, "Failed to read request body", errors.Wrap(err, "error reading request body"))
 			return
 		}
 
 		var body internal.SNSMessage
 		if err := json.Unmarshal(bodyBytes, &body); err != nil {
-			_ = c.Error(errors.Wrap(err, "error parsing JSON"))
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
+			abortWithError(c, http.StatusBadRequest, "Invalid JSON", errors.Wrap(err, "error parsing JSON"))
 			return
 		}
 
 		valid, err := internal.IsValidSignature(&body, certManager)
 		if err != nil {
-			_ = c.Error(errors.Wrap(err, "signature validation failed"))
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Signature validation failed"})
+			abortWithError(c, http.StatusInternalServerError, "Signature validation failed", errors.Wrap(err, "signature validation failed"))
 			return
 		}
 
 		if !valid {
-			_ = c.Error(errors.New("message signature is not valid"))
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Message signature is not valid"})
+			abortWithError(c, http.StatusUnauthorized, "Message signature is not valid", errors.New("message signature is not valid"))
 			return
 		}
 
 		if err := handleMessage(repo, &body); err != nil {
-			_ = c.Error(errors.Wrap(err, "failed to handle message "))
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to handle message"})
+			abortWithError(c, http.StatusInternalServerError, "Failed to handle message", errors.Wrap(err, "failed to handle message"))
 			return
 		}
 
@@ -72,18 +66,9 @@ func handleMessage(repo *internal.DbRepository, body *internal.SNSMessage) error
 
 // confirmSubscription confirms the SNS subscription by making GET request to subscribe URL
 func confirmSubscription(subscriptionURL string) error {
-	resp, err := http.Get(subscriptionURL)
+	_, err := internal.FetchURL(subscriptionURL)
 	if err != nil {
 		return errors.Wrap(err, "failed to confirm subscription")
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			slog.Error("error closing response body", "error", err)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.Newf("subscription confirmation failed with HTTP %d", resp.StatusCode)
 	}
 
 	slog.Info("Subscription confirmed")
@@ -96,14 +81,6 @@ func handleNotification(repo *internal.DbRepository, body *internal.SNSMessage) 
 		return errors.Wrap(err, "failed to unmarshal event")
 	}
 
-	batch, err := repo.BatchUpsert()
-	if err != nil {
-		return errors.Wrap(err, "failed to create batch upserter")
-	}
-
-	if _, err = batch.Upsert(models.NewEventFrom(event)); err != nil {
-		return errors.Wrap(batch.Abort(err), "failed to upsert")
-	}
-
-	return batch.Done()
+	_, err = repo.UpsertSingle(models.NewEventFrom(event))
+	return err
 }
