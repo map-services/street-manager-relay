@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/gin-gonic/gin"
@@ -92,7 +93,7 @@ func handleNotification(repo *internal.DbRepository, body *internal.SNSMessage, 
 	}
 
 	if excluded[strings.ToLower(activityType)] {
-		slog.Info("Skipping excluded activity type", "type", activityType)
+		slog.Info("Skipping excluded activity type", "type", activityType, "objectReference", event.ObjectReference)
 		return nil
 	}
 
