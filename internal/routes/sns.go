@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/gin-gonic/gin"
@@ -12,7 +13,12 @@ import (
 	"github.com/map-services/street-manager-relay/models"
 )
 
-func HandleSNSMessage(repo *internal.DbRepository, certManager internal.CertManager) gin.HandlerFunc {
+func HandleSNSMessage(repo *internal.DbRepository, certManager internal.CertManager, excludeActivityTypes []string) gin.HandlerFunc {
+	excluded := make(map[string]bool)
+	for _, t := range excludeActivityTypes {
+		excluded[strings.ToLower(t)] = true
+	}
+
 	return func(c *gin.Context) {
 		messageType := c.GetHeader("x-amz-sns-message-type")
 		if messageType == "" {
@@ -43,7 +49,7 @@ func HandleSNSMessage(repo *internal.DbRepository, certManager internal.CertMana
 			return
 		}
 
-		if err := handleMessage(repo, &body); err != nil {
+		if err := handleMessage(repo, &body, excluded); err != nil {
 			abortWithError(c, http.StatusInternalServerError, "Failed to handle message", errors.Wrap(err, "failed to handle message"))
 			return
 		}
@@ -52,12 +58,12 @@ func HandleSNSMessage(repo *internal.DbRepository, certManager internal.CertMana
 	}
 }
 
-func handleMessage(repo *internal.DbRepository, body *internal.SNSMessage) error {
+func handleMessage(repo *internal.DbRepository, body *internal.SNSMessage, excluded map[string]bool) error {
 	switch body.Type {
 	case "SubscriptionConfirmation":
 		return confirmSubscription(body.SubscribeURL)
 	case "Notification":
-		return handleNotification(repo, body)
+		return handleNotification(repo, body, excluded)
 	default:
 		slog.Warn("Unknown message type", "type", body.Type)
 		return nil
@@ -75,10 +81,20 @@ func confirmSubscription(subscriptionURL string) error {
 	return nil
 }
 
-func handleNotification(repo *internal.DbRepository, body *internal.SNSMessage) error {
+func handleNotification(repo *internal.DbRepository, body *internal.SNSMessage, excluded map[string]bool) error {
 	event, err := generated.UnmarshalEventNotifierMessage([]byte(body.Message))
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal event")
+	}
+
+	activityType := ""
+	if event.ObjectData.ActivityType != nil {
+		activityType = *event.ObjectData.ActivityType
+	}
+
+	if excluded[strings.ToLower(activityType)] {
+		slog.Info("Skipping excluded activity type", "type", activityType, "objectReference", event.ObjectReference)
+		return nil
 	}
 
 	_, err = repo.UpsertSingle(models.NewEventFrom(event))

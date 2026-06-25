@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "main.go",
-            "args": ["api-server", "--debug"],
+            "args": ["api-server", "--debug", "--exclude-activity-types=skips,hoardings"],
             "buildFlags": "-tags=jsoniter,sqlite_rtree"
         },
         {

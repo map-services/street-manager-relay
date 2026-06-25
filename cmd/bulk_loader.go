@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/map-services/street-manager-relay/generated"
@@ -18,7 +19,7 @@ func isRunningInDocker() bool {
 	return !os.IsNotExist(err)
 }
 
-func BulkLoader(dbPath string, folder string, maxRecords int) error {
+func BulkLoader(dbPath string, folder string, maxRecords int, excludeActivityTypes []string) error {
 	repo, err := internal.NewDbRepository(dbPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize db repository")
@@ -28,6 +29,11 @@ func BulkLoader(dbPath string, folder string, maxRecords int) error {
 			slog.Error("Error closing database", "error", err)
 		}
 	}()
+
+	excluded := make(map[string]bool)
+	for _, t := range excludeActivityTypes {
+		excluded[strings.ToLower(t)] = true
+	}
 
 	slog.Info("Finding files to import...")
 	files, err := walkFiles(folder, maxRecords)
@@ -56,6 +62,15 @@ func BulkLoader(dbPath string, folder string, maxRecords int) error {
 		event, err := loadJson(file)
 		if err != nil {
 			return errors.Wrapf(batch.Abort(err), "could not load file %s", file)
+		}
+
+		activityType := ""
+		if event.ObjectData.ActivityType != nil {
+			activityType = *event.ObjectData.ActivityType
+		}
+
+		if excluded[strings.ToLower(activityType)] {
+			continue
 		}
 
 		_, err = batch.Upsert(models.NewEventFrom(*event))

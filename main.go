@@ -17,6 +17,7 @@ func main() {
 	var debug bool
 	var maxFiles int
 	var filePath string
+	var excludeActivityTypes []string
 
 	if err := godotenv.Load(); err != nil {
 		slog.Info("No .env file found")
@@ -33,19 +34,20 @@ func main() {
 		Use:   "api-server [--db <path>] [--port <port>] [--debug]",
 		Short: "Start HTTP API server",
 		Run: func(_ *cobra.Command, _ []string) {
-			cmd.ApiServer(dbPath, port, debug)
+			cmd.ApiServer(dbPath, port, debug, excludeActivityTypes)
 		},
 	}
 
 	apiServerCmd.Flags().IntVar(&port, "port", 8080, "Port to run HTTP server on")
 	apiServerCmd.Flags().BoolVar(&debug, "debug", false, "Enable debugging (pprof) - WARING: do not enable in production")
+	apiServerCmd.Flags().StringSliceVar(&excludeActivityTypes, "exclude-activity-types", []string{}, "Comma-separated list of activity types to exclude")
 
 	bulkLoaderCmd := &cobra.Command{
-		Use:   "bulk-loader [--db <path>] [--max-files <n>] <folder>",
+		Use:   "bulk-loader [--db <path>] [--max-files <n>] [--exclude-activity-types <types>] <folder>",
 		Short: "Run bulk data loader",
 		Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
-			if err := cmd.BulkLoader(dbPath, args[0], maxFiles); err != nil {
+			if err := cmd.BulkLoader(dbPath, args[0], maxFiles, excludeActivityTypes); err != nil {
 				slog.Error("Failed to run bulk loader", "error", err)
 				os.Exit(1)
 			}
@@ -53,6 +55,7 @@ func main() {
 	}
 
 	bulkLoaderCmd.Flags().IntVar(&maxFiles, "max-files", math.MaxInt, "Maximum number of files to process")
+	bulkLoaderCmd.Flags().StringSliceVar(&excludeActivityTypes, "exclude-activity-types", []string{}, "Comma-separated list of activity types to exclude")
 
 	regenCmd := &cobra.Command{
 		Use:   "regen [--db <path>]",
