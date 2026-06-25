@@ -95,6 +95,10 @@ func ApiServer(dbPath string, port int, debug bool, excludeActivityTypes []strin
 		os.Exit(1)
 	}
 
+	if len(excludeActivityTypes) > 0 {
+		slog.Info("Excluing events","sctivityTypes", excludeActivityTypes)
+	}
+
 	certManager := internal.NewCertManager(memoize.NewMemoizer(24*time.Hour, 1*time.Hour))
 
 	r.POST("/v1/street-manager-relay/sns", routes.HandleSNSMessage(repo, certManager, excludeActivityTypes))
