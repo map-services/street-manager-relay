@@ -34,12 +34,13 @@ func main() {
 		Use:   "api-server [--db <path>] [--port <port>] [--debug]",
 		Short: "Start HTTP API server",
 		Run: func(_ *cobra.Command, _ []string) {
-			cmd.ApiServer(dbPath, port, debug)
+			cmd.ApiServer(dbPath, port, debug, excludeActivityTypes)
 		},
 	}
 
 	apiServerCmd.Flags().IntVar(&port, "port", 8080, "Port to run HTTP server on")
 	apiServerCmd.Flags().BoolVar(&debug, "debug", false, "Enable debugging (pprof) - WARING: do not enable in production")
+	apiServerCmd.Flags().StringSliceVar(&excludeActivityTypes, "exclude-activity-types", []string{}, "Comma-separated list of activity types to exclude")
 
 	bulkLoaderCmd := &cobra.Command{
 		Use:   "bulk-loader [--db <path>] [--max-files <n>] [--exclude-activity-types <types>] <folder>",

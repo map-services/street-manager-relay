@@ -27,7 +27,7 @@ import (
 	hc_config "github.com/tavsec/gin-healthcheck/config"
 )
 
-func ApiServer(dbPath string, port int, debug bool) {
+func ApiServer(dbPath string, port int, debug bool, excludeActivityTypes []string) {
 	logger := internal.SetupLogger()
 	godx.Diagnostics(logger)
 
@@ -97,7 +97,7 @@ func ApiServer(dbPath string, port int, debug bool) {
 
 	certManager := internal.NewCertManager(memoize.NewMemoizer(24*time.Hour, 1*time.Hour))
 
-	r.POST("/v1/street-manager-relay/sns", routes.HandleSNSMessage(repo, certManager))
+	r.POST("/v1/street-manager-relay/sns", routes.HandleSNSMessage(repo, certManager, excludeActivityTypes))
 	r.GET("/v1/street-manager-relay/search", routes.HandleSearch(repo, organisations))
 	r.GET("/v1/street-manager-relay/refdata", routes.HandleRefData(repo, memoize.NewMemoizer(10*time.Minute, 1*time.Hour)))
 
