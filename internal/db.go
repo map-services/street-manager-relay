@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/map-services/street-manager-relay/models"
@@ -547,6 +548,82 @@ func (repo *DbRepository) HealthCheck() checks.Check {
 	return checks.SqlCheck{
 		Sql: repo.db,
 	}
+}
+
+// CleanupOldEvents deletes events with actual_end_date_time before the cutoff date,
+// removes orphaned rtree entries, and runs VACUUM.
+// It returns the number of events deleted, the number of orphaned rtree entries deleted, and any error.
+func (repo *DbRepository) CleanupOldEvents(cutoff time.Time) (int64, int64, error) {
+	// Delete old events
+	tx, err := repo.db.Begin()
+	if err != nil {
+		return 0, 0, errors.Wrap(err, "failed to begin transaction")
+	}
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			slog.Error("Rollback error during cleanup", "error", err)
+		}
+	}()
+
+	deleteEventsStmt, err := tx.Prepare(`DELETE FROM events WHERE actual_end_date_time IS NOT NULL AND actual_end_date_time < ?`)
+	if err != nil {
+		return 0, 0, errors.Wrap(err, "failed to prepare delete events statement")
+	}
+	defer func() {
+		if err := deleteEventsStmt.Close(); err != nil {
+			slog.Error("Error closing delete events statement", "error", err)
+		}
+	}()
+
+	res, err := deleteEventsStmt.Exec(cutoff.Format("2006-01-02 15:04:05"))
+	if err != nil {
+		return 0, 0, errors.Wrap(err, "failed to delete old events")
+	}
+	eventsDeleted, _ := res.RowsAffected()
+
+	if err := tx.Commit(); err != nil {
+		return 0, 0, errors.Wrap(err, "failed to commit events deletion")
+	}
+
+	// Delete orphaned rtree entries
+	tx2, err := repo.db.Begin()
+	if err != nil {
+		return eventsDeleted, 0, errors.Wrap(err, "failed to begin transaction for rtree cleanup")
+	}
+	defer func() {
+		if err := tx2.Rollback(); err != nil {
+			slog.Error("Rollback error during rtree cleanup", "error", err)
+		}
+	}()
+
+	deleteRtreeStmt, err := tx2.Prepare(`DELETE FROM events_rtree WHERE id NOT IN (SELECT id FROM events)`)
+	if err != nil {
+		return eventsDeleted, 0, errors.Wrap(err, "failed to prepare delete rtree statement")
+	}
+	defer func() {
+		if err := deleteRtreeStmt.Close(); err != nil {
+			slog.Error("Error closing delete rtree statement", "error", err)
+		}
+	}()
+
+	res2, err := deleteRtreeStmt.Exec()
+	if err != nil {
+		return eventsDeleted, 0, errors.Wrap(err, "failed to delete orphaned rtree entries")
+	}
+	rtreeDeleted, _ := res2.RowsAffected()
+
+	if err := tx2.Commit(); err != nil {
+		return eventsDeleted, rtreeDeleted, errors.Wrap(err, "failed to commit rtree deletion")
+	}
+
+	// Run VACUUM to reclaim space
+	_, err = repo.db.Exec(`VACUUM`)
+	if err != nil {
+		return eventsDeleted, rtreeDeleted, errors.Wrap(err, "failed to run VACUUM")
+	}
+
+	slog.Info("Database cleanup completed", "events_deleted", eventsDeleted, "rtree_orphans_deleted", rtreeDeleted)
+	return eventsDeleted, rtreeDeleted, nil
 }
 
 func (repo *DbRepository) RegenerateIndex() (int, int, error) {

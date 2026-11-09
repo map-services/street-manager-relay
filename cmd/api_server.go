@@ -17,6 +17,7 @@ import (
 	"github.com/map-services/street-manager-relay/internal/middleware"
 	"github.com/map-services/street-manager-relay/internal/promoter"
 	"github.com/map-services/street-manager-relay/internal/routes"
+	"github.com/robfig/cron/v3"
 	"github.com/rm-hull/godx"
 	"github.com/tavsec/gin-healthcheck/checks"
 
@@ -100,6 +101,27 @@ func ApiServer(dbPath string, port int, debug bool, excludeActivityTypes []strin
 	}
 
 	certManager := internal.NewCertManager(memoize.NewMemoizer(24*time.Hour, 1*time.Hour))
+
+	// Start daily database cleanup cron job
+	c := cron.New()
+	cutoffDays := 7
+	_, err = c.AddFunc("30 4 * * *", func() {
+		slog.Info("Starting scheduled database cleanup")
+		cutoff := time.Now().AddDate(0, 0, -cutoffDays)
+		eventsDeleted, rtreeDeleted, err := repo.CleanupOldEvents(cutoff)
+		if err != nil {
+			slog.Error("Database cleanup failed", "error", err)
+			return
+		}
+		slog.Info("Scheduled database cleanup finished", "events_deleted", eventsDeleted, "rtree_orphans_deleted", rtreeDeleted)
+	})
+	if err != nil {
+		slog.Error("Failed to add cleanup cron job", "error", err)
+		os.Exit(1)
+	}
+	c.Start()
+	defer c.Stop()
+	slog.Info("Database cleanup cron job scheduled (daily at 04:30)")
 
 	r.POST("/v1/street-manager-relay/sns", routes.HandleSNSMessage(repo, certManager, excludeActivityTypes))
 	r.GET("/v1/street-manager-relay/search", routes.HandleSearch(repo, organisations))
