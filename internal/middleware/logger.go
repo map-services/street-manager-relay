@@ -12,8 +12,6 @@ import (
 func RequestLogger(logger *slog.Logger, excludedPaths ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		path := c.Request.URL.Path
-		raw := c.Request.URL.RawQuery
 
 		c.Next()
 
@@ -21,21 +19,20 @@ func RequestLogger(logger *slog.Logger, excludedPaths ...string) gin.HandlerFunc
 			return
 		}
 
+		path := c.Request.URL.Path
+		raw := c.Request.URL.RawQuery
 		if raw != "" {
 			path = path + "?" + raw
 		}
-
-		end := time.Now()
-		latency := end.Sub(start)
 
 		logger.Info("request",
 			"method", c.Request.Method,
 			"path", path,
 			"status", c.Writer.Status(),
-			"latency_ms", latency.Milliseconds(),
+			"latency_ms", time.Since(start).Milliseconds(),
 			"ip", c.ClientIP(),
 			"user_agent", c.Request.UserAgent(),
-			"body_size", c.Writer.Size(),
+			"body_size", c.Request.ContentLength,
 		)
 	}
 }
