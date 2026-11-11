@@ -25,14 +25,20 @@ func RequestLogger(logger *slog.Logger, excludedPaths ...string) gin.HandlerFunc
 			path = path + "?" + raw
 		}
 
-		logger.Info("request",
+		args := []any{
 			"method", c.Request.Method,
 			"path", path,
 			"status", c.Writer.Status(),
 			"latency_ms", time.Since(start).Milliseconds(),
 			"ip", c.ClientIP(),
 			"user_agent", c.Request.UserAgent(),
-			"body_size", c.Request.ContentLength,
-		)
+			"response_body_size", c.Writer.Size(),
+		}
+
+		if c.Request.Method == "POST" || c.Request.Method == "PUT" || c.Request.Method == "PATCH" {
+			args = append(args, "request_payload_size", c.Request.ContentLength)
+		}
+
+		logger.Info("request", args...)
 	}
 }
