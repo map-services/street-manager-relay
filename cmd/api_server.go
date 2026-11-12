@@ -17,8 +17,8 @@ import (
 	"github.com/map-services/street-manager-relay/internal/middleware"
 	"github.com/map-services/street-manager-relay/internal/promoter"
 	"github.com/map-services/street-manager-relay/internal/routes"
-	"github.com/robfig/cron/v3"
 	"github.com/rm-hull/godx"
+	"github.com/robfig/cron/v3"
 	"github.com/tavsec/gin-healthcheck/checks"
 
 	"github.com/getsentry/sentry-go"
@@ -97,7 +97,7 @@ func ApiServer(dbPath string, port int, debug bool, excludeActivityTypes []strin
 	}
 
 	if len(excludeActivityTypes) > 0 {
-		slog.Info("Excluing events","sctivityTypes", excludeActivityTypes)
+		slog.Info("Excluing events", "activityTypes", excludeActivityTypes)
 	}
 
 	certManager := internal.NewCertManager(memoize.NewMemoizer(24*time.Hour, 1*time.Hour))
