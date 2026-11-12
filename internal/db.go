@@ -558,10 +558,9 @@ func (repo *DbRepository) HealthCheck() checks.Check {
 }
 
 // CleanupOldEvents deletes events with actual_end_date_time before the cutoff date
-// and removes orphaned rtree entries.
+// and removes orphaned rtree entries within a single transaction.
 // It returns the number of events deleted, the number of orphaned rtree entries deleted, and any error.
 func (repo *DbRepository) CleanupOldEvents(cutoff time.Time) (int64, int64, error) {
-	// Delete old events
 	tx, err := repo.db.Begin()
 	if err != nil {
 		return 0, 0, errors.Wrap(err, "failed to begin transaction")
@@ -588,24 +587,9 @@ func (repo *DbRepository) CleanupOldEvents(cutoff time.Time) (int64, int64, erro
 	}
 	eventsDeleted, _ := res.RowsAffected()
 
-	if err := tx.Commit(); err != nil {
-		return 0, 0, errors.Wrap(err, "failed to commit events deletion")
-	}
-
-	// Delete orphaned rtree entries
-	tx2, err := repo.db.Begin()
+	deleteRtreeStmt, err := tx.Prepare(`DELETE FROM events_rtree WHERE id NOT IN (SELECT id FROM events)`)
 	if err != nil {
-		return eventsDeleted, 0, errors.Wrap(err, "failed to begin transaction for rtree cleanup")
-	}
-	defer func() {
-		if err := tx2.Rollback(); err != nil && !stderrors.Is(err, sql.ErrTxDone) {
-			slog.Error("Rollback error during rtree cleanup", "error", err)
-		}
-	}()
-
-	deleteRtreeStmt, err := tx2.Prepare(`DELETE FROM events_rtree WHERE id NOT IN (SELECT id FROM events)`)
-	if err != nil {
-		return eventsDeleted, 0, errors.Wrap(err, "failed to prepare delete rtree statement")
+		return 0, 0, errors.Wrap(err, "failed to prepare delete rtree statement")
 	}
 	defer func() {
 		if err := deleteRtreeStmt.Close(); err != nil {
@@ -615,12 +599,12 @@ func (repo *DbRepository) CleanupOldEvents(cutoff time.Time) (int64, int64, erro
 
 	res2, err := deleteRtreeStmt.Exec()
 	if err != nil {
-		return eventsDeleted, 0, errors.Wrap(err, "failed to delete orphaned rtree entries")
+		return 0, 0, errors.Wrap(err, "failed to delete orphaned rtree entries")
 	}
 	rtreeDeleted, _ := res2.RowsAffected()
 
-	if err := tx2.Commit(); err != nil {
-		return eventsDeleted, rtreeDeleted, errors.Wrap(err, "failed to commit rtree deletion")
+	if err := tx.Commit(); err != nil {
+		return 0, 0, errors.Wrap(err, "failed to commit cleanup")
 	}
 
 	slog.Info("Database cleanup completed", "events_deleted", eventsDeleted, "rtree_orphans_deleted", rtreeDeleted)
