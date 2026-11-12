@@ -112,7 +112,7 @@ type Batch struct {
 }
 
 func NewDbRepository(dbPath string) (*DbRepository, error) {
-	db, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
+	db, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_txlock=immediate")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open database")
 	}
