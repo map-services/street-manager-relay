@@ -555,8 +555,8 @@ func (repo *DbRepository) HealthCheck() checks.Check {
 	}
 }
 
-// CleanupOldEvents deletes events with actual_end_date_time before the cutoff date,
-// removes orphaned rtree entries, and runs VACUUM.
+// CleanupOldEvents deletes events with actual_end_date_time before the cutoff date
+// and removes orphaned rtree entries.
 // It returns the number of events deleted, the number of orphaned rtree entries deleted, and any error.
 func (repo *DbRepository) CleanupOldEvents(cutoff time.Time) (int64, int64, error) {
 	// Delete old events
@@ -619,12 +619,6 @@ func (repo *DbRepository) CleanupOldEvents(cutoff time.Time) (int64, int64, erro
 
 	if err := tx2.Commit(); err != nil {
 		return eventsDeleted, rtreeDeleted, errors.Wrap(err, "failed to commit rtree deletion")
-	}
-
-	// Run VACUUM to reclaim space
-	_, err = repo.db.Exec(`VACUUM`)
-	if err != nil {
-		return eventsDeleted, rtreeDeleted, errors.Wrap(err, "failed to run VACUUM")
 	}
 
 	slog.Info("Database cleanup completed", "events_deleted", eventsDeleted, "rtree_orphans_deleted", rtreeDeleted)
