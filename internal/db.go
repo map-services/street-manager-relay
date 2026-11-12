@@ -120,6 +120,11 @@ func NewDbRepository(dbPath string) (*DbRepository, error) {
 		return nil, errors.Wrap(err, "failed to connect to database")
 	}
 
+	_, err = db.Exec("PRAGMA journal_size_limit = 67108864")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to set journal_size_limit pragma")
+	}
+
 	err = create(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create database")
