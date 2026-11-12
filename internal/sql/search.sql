@@ -91,3 +91,4 @@ AND (?10 IS NULL OR json_array_length(?10) = 0 OR e.work_category_ref IN (SELECT
 AND (?11 IS NULL OR json_array_length(?11) = 0 OR e.road_category IN (SELECT value FROM json_each(?11)))
 AND (?12 IS NULL OR json_array_length(?12) = 0 OR e.highway_authority IN (SELECT value FROM json_each(?12)))
 AND (?13 IS NULL OR json_array_length(?13) = 0 OR e.promoter_organisation IN (SELECT value FROM json_each(?13)))
+LIMIT ?14

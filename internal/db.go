@@ -233,12 +233,12 @@ func (repo *DbRepository) RefData() (*models.RefData, error) {
 	return &refData, nil
 }
 
-func (repo *DbRepository) Search(bbox *models.BBox, facets *models.Facets, temporalFilters *models.TemporalFilters) ([]*models.Event, error) {
+func (repo *DbRepository) Search(bbox *models.BBox, facets *models.Facets, temporalFilters *models.TemporalFilters, limit int) ([]*models.Event, error) {
 	if bbox == nil {
 		return nil, errors.New("bounding box is required")
 	}
 
-	params := facetsToParams(bbox, facets, temporalFilters)
+	params := facetsToParams(bbox, facets, temporalFilters, limit)
 	rows, err := repo.searchStmt.Query(params...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute search query")
@@ -266,7 +266,7 @@ func (repo *DbRepository) Search(bbox *models.BBox, facets *models.Facets, tempo
 	return events, nil
 }
 
-func facetsToParams(bbox *models.BBox, facets *models.Facets, temporalFilters *models.TemporalFilters) []any {
+func facetsToParams(bbox *models.BBox, facets *models.Facets, temporalFilters *models.TemporalFilters, limit int) []any {
 	params := []any{
 		// Correct parameter order: maxX, minX, maxY, minY (which seems counterintuitive)
 		bbox.MaxX, bbox.MinX, bbox.MaxY, bbox.MinY,
@@ -289,6 +289,8 @@ func facetsToParams(bbox *models.BBox, facets *models.Facets, temporalFilters *m
 		jsonVal := toJSONOrNil(getFacetSlice(facets, getter))
 		params = append(params, jsonVal)
 	}
+
+	params = append(params, limit)
 
 	return params
 }

@@ -72,7 +72,7 @@ func TestDbRepository_Upsert(t *testing.T) {
 	facets := &models.Facets{}
 	temporal := &models.TemporalFilters{MaxDaysAhead: 30, MaxDaysBehind: 30}
 
-	events, err := repo.Search(bbox, facets, temporal)
+	events, err := repo.Search(bbox, facets, temporal, 200)
 	assert.NoError(t, err)
 	assert.Len(t, events, 1)
 	assert.Equal(t, "Low Street", *events[0].StreetName)

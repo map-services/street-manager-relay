@@ -32,7 +32,9 @@ func HandleSearch(repo *internal.DbRepository, organisations promoter.Organisati
 			return
 		}
 
-		events, err := repo.Search(bbox, facets, temporalFilters)
+		limit := bindLimit(c)
+
+		events, err := repo.Search(bbox, facets, temporalFilters, limit)
 		if err != nil {
 			abortWithError(c, http.StatusInternalServerError, "Failed to search events", errors.Wrap(err, "error searching events"))
 			return
@@ -106,6 +108,19 @@ func bindTemporalFilters(c *gin.Context) (*models.TemporalFilters, error) {
 	}
 
 	return &filters, nil
+}
+
+const defaultSearchLimit = 200
+
+func bindLimit(c *gin.Context) int {
+	limit := defaultSearchLimit
+	if value := c.Query("limit"); value != "" {
+		num, err := strconv.Atoi(value)
+		if err == nil && num > 0 {
+			limit = num
+		}
+	}
+	return limit
 }
 
 type EnrichedEvent struct {
