@@ -3,6 +3,7 @@ package internal
 import (
 	"database/sql"
 	_ "embed"
+	stderrors "errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -566,7 +567,7 @@ func (repo *DbRepository) CleanupOldEvents(cutoff time.Time) (int64, int64, erro
 		return 0, 0, errors.Wrap(err, "failed to begin transaction")
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !stderrors.Is(err, sql.ErrTxDone) {
 			slog.Error("Rollback error during cleanup", "error", err)
 		}
 	}()
@@ -597,7 +598,7 @@ func (repo *DbRepository) CleanupOldEvents(cutoff time.Time) (int64, int64, erro
 		return eventsDeleted, 0, errors.Wrap(err, "failed to begin transaction for rtree cleanup")
 	}
 	defer func() {
-		if err := tx2.Rollback(); err != nil {
+		if err := tx2.Rollback(); err != nil && !stderrors.Is(err, sql.ErrTxDone) {
 			slog.Error("Rollback error during rtree cleanup", "error", err)
 		}
 	}()
@@ -635,7 +636,7 @@ func (repo *DbRepository) RegenerateIndex() (int, int, error) {
 
 	defer func() {
 		// Rollback will have no effect if commit was already called
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != nil && !stderrors.Is(err, sql.ErrTxDone) {
 			slog.Error("Rollback error", "error", err)
 		}
 	}()
