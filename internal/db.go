@@ -287,8 +287,7 @@ func facetsToParams(bbox *models.BBox, facets *models.Facets, temporalFilters *m
 
 	for _, getter := range facetGetters {
 		jsonVal := toJSONOrNil(getFacetSlice(facets, getter))
-		// Needs to be copied 3x times for the placeholders
-		params = append(params, jsonVal, jsonVal, jsonVal)
+		params = append(params, jsonVal)
 	}
 
 	return params

@@ -75,19 +75,19 @@ SELECT
 
 FROM events AS e
 INNER JOIN events_rtree r ON e.id = r.id
-WHERE r.minx <= ? AND r.maxx >= ? AND r.miny <= ? AND r.maxy >= ?
+WHERE r.minx <= ?1 AND r.maxx >= ?2 AND r.miny <= ?3 AND r.maxy >= ?4
 AND (
-    COALESCE(e.actual_start_date_time, e.start_date, e.start_time, e.proposed_start_date, e.proposed_start_time) <= DATE('now', ?)
+    COALESCE(e.actual_start_date_time, e.start_date, e.start_time, e.proposed_start_date, e.proposed_start_time) <= DATE('now', ?5)
 )
 AND (
     COALESCE(e.actual_end_date_time, e.end_date, e.end_time, e.proposed_end_date, e.proposed_end_time) IS NULL OR
-    COALESCE(e.actual_end_date_time, e.end_date, e.end_time, e.proposed_end_date, e.proposed_end_time) >= DATE('now', ?)
+    COALESCE(e.actual_end_date_time, e.end_date, e.end_time, e.proposed_end_date, e.proposed_end_time) >= DATE('now', ?6)
 )
 -- Facet filters: empty JSON array means no filter
-AND (? IS NULL OR json_array_length(?) = 0 OR e.permit_status IN (SELECT value FROM json_each(?)))
-AND (? IS NULL OR json_array_length(?) = 0 OR e.traffic_management_type_ref IN (SELECT value FROM json_each(?)))
-AND (? IS NULL OR json_array_length(?) = 0 OR e.work_status_ref IN (SELECT value FROM json_each(?)))
-AND (? IS NULL OR json_array_length(?) = 0 OR e.work_category_ref IN (SELECT value FROM json_each(?)))
-AND (? IS NULL OR json_array_length(?) = 0 OR e.road_category IN (SELECT value FROM json_each(?)))
-AND (? IS NULL OR json_array_length(?) = 0 OR e.highway_authority IN (SELECT value FROM json_each(?)))
-AND (? IS NULL OR json_array_length(?) = 0 OR e.promoter_organisation IN (SELECT value FROM json_each(?)))
+AND (?7 IS NULL OR json_array_length(?7) = 0 OR e.permit_status IN (SELECT value FROM json_each(?7)))
+AND (?8 IS NULL OR json_array_length(?8) = 0 OR e.traffic_management_type_ref IN (SELECT value FROM json_each(?8)))
+AND (?9 IS NULL OR json_array_length(?9) = 0 OR e.work_status_ref IN (SELECT value FROM json_each(?9)))
+AND (?10 IS NULL OR json_array_length(?10) = 0 OR e.work_category_ref IN (SELECT value FROM json_each(?10)))
+AND (?11 IS NULL OR json_array_length(?11) = 0 OR e.road_category IN (SELECT value FROM json_each(?11)))
+AND (?12 IS NULL OR json_array_length(?12) = 0 OR e.highway_authority IN (SELECT value FROM json_each(?12)))
+AND (?13 IS NULL OR json_array_length(?13) = 0 OR e.promoter_organisation IN (SELECT value FROM json_each(?13)))
